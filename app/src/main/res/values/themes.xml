@@ -1,0 +1,8 @@
+<resources>
+    <!--
+      Compose owns the actual UI theming (MaterialTheme in MainActivity).
+      This XML theme exists only so the manifest's android:theme reference
+      resolves during the initial system-window inflation.
+    -->
+    <style name="Theme.JevPhishGuard" parent="android:Theme.Material.Light.NoActionBar" />
+</resources>
