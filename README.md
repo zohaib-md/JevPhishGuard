@@ -15,7 +15,8 @@ quiet log entry for everything else.
 | `PrivacyFilter.kt` | Masks OTP-shaped codes before anything leaves the device |
 | `MessageStore.kt` | In-memory log + running cost/latency stats |
 | `NotificationHelper.kt` | Heads-up alert for high-confidence phishing |
-| `MainActivity.kt` | Compose UI — API key entry, stats header, message list |
+| `ui/PhishGuardScreen.kt` | The Compose screen itself — status band, message list, empty state |
+| `MainActivity.kt` | Wires `MessageStore` into the screen, permissions, and the API key dialog |
 | `SettingsStore.kt` | Where the API key lives (plain SharedPreferences — see caveats) |
 
 ## Setup
@@ -24,7 +25,8 @@ quiet log entry for everything else.
    wrapper is included and pinned to Gradle 8.7 (the confirmed minimum for
    AGP 8.5.x) — Android Studio should sync without prompting you to generate one.
 2. Run on an emulator or a device running Android 8.0+ (minSdk 26).
-3. On first launch, paste your TypeSafe API key into the field and hit **Save key**.
+3. On first launch, tap the settings icon in the top-right of the status band,
+   paste your TypeSafe API key in, and hit **Save**.
 4. Grant the SMS and notification permissions when prompted.
 
 ## Testing without touching your real SIM
@@ -59,6 +61,13 @@ or use any of the free SMS-testing gateways. Don't test with real account
 numbers, real OTPs tied to your accounts, or anything you wouldn't want
 logged.
 
+If a real-device test silently does nothing, check whether the message
+actually arrived as RCS instead of SMS — two Google Messages users chatting
+will often fall back to RCS chat features automatically, and RCS never
+triggers `SMS_RECEIVED` (there's no public broadcast for it at all). Turn
+off RCS chat features on one side (Google Messages → profile icon →
+Messages settings → RCS chats → turn off) to force plain SMS.
+
 ## Design decisions worth knowing about (and worth mentioning if you post this)
 
 **OTP masking.** `PrivacyFilter` strips numeric codes before the message
@@ -91,16 +100,14 @@ logged — the receiver never crashes and the real SMS is never blocked. A
 false negative from an outage is fine; breaking someone's actual messaging
 is not.
 
-## One thing to verify on your first real run
+## A note on the TypeSafe response shape
 
-The Choice answer's field names (`choice`, `confidence`, `probabilities`)
-are confirmed against TypeSafe's own docs. The exact field name for a Noul
-answer's probability wasn't independently nailed down while building this —
-`JevClient.parseAnswer()` checks a few plausible shapes defensively. Check
-Logcat for the `JevClient` tag on your first real request (there's a
-`Log.d` with the raw JSON left in on purpose) and compare it against what
-you already validated in your Meeting Radar project. Adjust `parseAnswer()`
-if the shape doesn't match.
+Choice answers carry `choice`, `confidence`, and a `probabilities` map; Noul
+answers carry their single probability under `noul`. Both were confirmed
+against a live API response — if TypeSafe changes this shape later,
+`JevClient.parseAnswer()` is the only place that needs to change. There's a
+`Log.d` under the `JevClient` tag on every request if you want to check the
+raw JSON yourself.
 
 ## Rotate your key
 
